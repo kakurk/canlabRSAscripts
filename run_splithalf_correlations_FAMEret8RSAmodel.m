@@ -14,27 +14,28 @@ else % if not on unix, assume we are on Anvil
 end
 
 %% Set analysis parameters
-subjects   = {'18y404'  '18y566'  '20y297'  '20y396'  '20y415'  '20y439'};
+subjects   = {'18y404'  '18y566'  '20y297' '20y415'  '20y439'}; % '20y396'
 rois       = {'rLTG_left'}; %add in leftHC and right HC for starters
 study_path = '/gpfs/group/n/nad12/RSA/Analysis_ret/FAMEret8RSA_hrf';
 
 % initalizing the sum of weighted zs all array
-sum_weighted_zs_all = cell(1,length(rois));
+z_all   = cell(1,length(rois));
+rho_all = cell(1,length(rois));
 
 for ss = 1:length(subjects)
  
     % Edit the SPM.mat file to use paths here on Hammer
-    spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), 'S:\nad12\FAME8', '/gpfs/group/n/nad12/RSA')
-    spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), '\', '/')
+%     spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), 'S:\nad12\FAME8', '/gpfs/group/n/nad12/RSA')
+%     spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), '\', '/')
     
     %% Computations
     data_path  = fullfile(study_path, subjects{ss});
     
     % Average Betas
-    average_betas(subjects{ss}, study_path, 'HREC', '.*HREC.*');
-    average_betas(subjects{ss}, study_path, 'HFAM', '.*HFAM.*');
-    average_betas(subjects{ss}, study_path, 'FAREC', '.*FAREC.*');
-    average_betas(subjects{ss}, study_path, 'FAFAM', '.*FAFAM.*');
+%     average_betas(subjects{ss}, study_path, 'HREC', '.*HREC.*');
+%     average_betas(subjects{ss}, study_path, 'HFAM', '.*HFAM.*');
+%     average_betas(subjects{ss}, study_path, 'FAREC', '.*FAREC.*');
+%     average_betas(subjects{ss}, study_path, 'FAFAM', '.*FAFAM.*');
     
   for rr = 1:length(rois)
 
@@ -199,13 +200,14 @@ for ss = 1:length(subjects)
     sum_weighted_z
     xlswrite(fullfile(output_path, filename), sum_weighted_z)
 
-    %% Store result in a matrix for later stats calculations
+    %% Store result in a structure for later calculations
 
-    % store the result for this subject in sum_weighted_zs_all
+    % store the result for this subject in z_all
     % (at the i_subj-th position), so that
     % group statistics can be computed
     % >@@>
-    sum_weighted_zs_all{rr}(i_subj) = sum_weighted_z;
+    z_all{rr}   = cat(3, z_all{rr}, z);
+    rho_all{rr} = cat(3, rho_all{rr}, z);
     % <@@<
     
     
@@ -213,24 +215,22 @@ for ss = 1:length(subjects)
 
 end
 
-%% Compute T-Statistics and Print Results
+%% Compute T-Statistics
+
+stats_all = cell(1,length(rois));
 
 for rr = 1:length(rois)
-
-    % Using matlab's stat toolbox (if present)
-    if cosmo_check_external('@stats',false)
-
-        % >@@>
-        [h,p,ci,stats] = ttest(sum_weighted_zs_all{rr});
-        fprintf(['correlation difference in %s at group level: '...
-            '%.3f +/- %.3f, t_%d=%.3f, p=%.5f (using matlab stats '...
-            'toolbox)\n'],...
-            rois{i_roi},mean(sum_weighted_zs_all{rr}),...
-                        std(sum_weighted_zs_all{rr}),...
-            stats.df,stats.tstat,p);
-        % <@@<
-    else
-        fprintf('Matlab stats toolbox not available\n');
+    
+    [rows, cols, ~] = size(z_all{rr});
+    
+    for crow = 1:rows
+        for ccol = 1:cols
+            [h,p,ci,stats]            = ttest(z_all{rr}(crow,ccol,:));
+            stats_all{rr}(crow, ccol) = stats.tstat;
+        end
     end
-
+    
+    fprintf('T Statistics = \n\n')
+    disp(stats_all{rr})
+    
 end
