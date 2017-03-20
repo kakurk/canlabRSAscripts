@@ -2,12 +2,6 @@
 % Script for copying all of the individual subject's excel sheet to a
 % single grand excel sheet
 
-if isunix % if we are on Hammer, a unix system
-    addpath(genpath('/gpfs/group/n/nad12/RSA/Scripts/CoSMoMVPA-master'))
-else % otherwise assume we are on Anvil 
-    addpath(genpath('S:\nad12\CoSMoMVPA-master'))
-end
-
 %% Set analysis parameters
 rois       = {'rLTG_left', 'rHC_left', 'rSMA_bilat'}; 
 subjects   = {
