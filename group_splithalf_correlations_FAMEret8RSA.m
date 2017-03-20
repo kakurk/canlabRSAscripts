@@ -7,11 +7,11 @@
 % #   For CoSMoMVPA's copyright information and license terms,   #
 % #   see the COPYING file distributed with CoSMoMVPA.           #
 
-% Preliminary
-% clc
-% clear all
-addpath(genpath('S:\nad12\CoSMoMVPA-master'))
-%addpath(genpath('/gpfs/group/n/nad12/RSA/Scripts/CoSMoMVPA-master'))
+if isunix % if we are on Hammer, a unix system
+    addpath(genpath('/gpfs/group/n/nad12/RSA/Scripts/CoSMoMVPA-master'))
+else % otherwise assume we are on Anvil 
+    addpath(genpath('S:\nad12\CoSMoMVPA-master'))
+end
 
 %% Set analysis parameters
 rois = {'rLTG_left', 'rHC_left', 'rSMA_bilat'}; 
