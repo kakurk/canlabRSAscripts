@@ -14,9 +14,9 @@ else % if not on unix, assume we are on Anvil
 end
 
 %% Set analysis parameters
-subjects = {'18y404','18y566','20y297'};%'20y415','20y439','20y441','20y444','20y455','21y299','21y437','21y521','21y534','22y422','23y452','23y546','25y543'};%'67o153','67o178','69o144','70o118','71o152','71o193','72o164','73o165','76o120','76o162','78o113','79o108','80o121','80o128','81o125','81o312','83o197'}; 
+subjects   = {'18y404','18y566','20y297'};%'20y415','20y439','20y441','20y444','20y455','21y299','21y437','21y521','21y534','22y422','23y452','23y546','25y543'};%'67o153','67o178','69o144','70o118','71o152','71o193','72o164','73o165','76o120','76o162','78o113','79o108','80o121','80o128','81o125','81o312','83o197'}; 
 %Ss to add after Model is ran (02/10/17 ICT) '79o117','70o316','75o320','69o277','79o279','67o136'
-rois     = {'rLTG_left'}; %add in leftHC and right HC for starters
+rois       = {'rLTG_left'}; %add in leftHC and right HC for starters
 study_path = 'S:\nad12\FAME8\Analysis_ret\FAMEret8RSA_hrf';
 
 % Edit the SPM.mat file to use paths here on Hammer
