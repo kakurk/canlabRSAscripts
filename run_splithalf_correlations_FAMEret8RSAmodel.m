@@ -25,17 +25,17 @@ rho_all = cell(1,length(rois));
 for ss = 1:length(subjects)
  
     % Edit the SPM.mat file to use paths here on Hammer
-%     spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), 'S:\nad12\FAME8', '/gpfs/group/n/nad12/RSA')
-%     spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), '\', '/')
+    spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), 'S:\nad12\FAME8', '/gpfs/group/n/nad12/RSA')
+    spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), '\', '/')
     
     %% Computations
     data_path  = fullfile(study_path, subjects{ss});
     
     % Average Betas
-%     average_betas(subjects{ss}, study_path, 'HREC', '.*HREC.*');
-%     average_betas(subjects{ss}, study_path, 'HFAM', '.*HFAM.*');
-%     average_betas(subjects{ss}, study_path, 'FAREC', '.*FAREC.*');
-%     average_betas(subjects{ss}, study_path, 'FAFAM', '.*FAFAM.*');
+    average_betas(subjects{ss}, study_path, 'HREC', '.*HREC.*');
+    average_betas(subjects{ss}, study_path, 'HFAM', '.*HFAM.*');
+    average_betas(subjects{ss}, study_path, 'FAREC', '.*FAREC.*');
+    average_betas(subjects{ss}, study_path, 'FAFAM', '.*FAFAM.*');
     
   for rr = 1:length(rois)
 
