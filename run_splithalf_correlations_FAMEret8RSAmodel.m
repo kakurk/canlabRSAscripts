@@ -16,7 +16,7 @@ end
 %% Set analysis parameters
 subjects   = {'18y404'  '18y566'  '20y297'  '20y396'  '20y415'  '20y439'};
 rois       = {'rLTG_left'}; %add in leftHC and right HC for starters
-study_path = 'S:\nad12\FAME8\Analysis_ret\FAMEret8RSA_hrf';
+study_path = '/gpfs/group/n/nad12/RSA/Analysis_ret/FAMEret8RSA_hrf';
 
 % initalizing the sum of weighted zs all array
 sum_weighted_zs_all = cell(1,length(rois));
