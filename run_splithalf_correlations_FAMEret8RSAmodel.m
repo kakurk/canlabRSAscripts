@@ -23,6 +23,9 @@ study_path = 'S:\nad12\FAME8\Analysis_ret\FAMEret8RSA_hrf';
 %spm_changepath(fullfile(study_path, subjects{1}, 'SPM.mat'), 'S:\nad12\FAME8', '/gpfs/group/n/nad12/RSA')
 %spm_changepath(fullfile(study_path, subjects{1}, 'SPM.mat'), '\', '/')
 
+% initalizing the sum of weighted zs all array
+sum_weighted_zs_all = cell(1,length(rois));
+
 for ss = 1:length(subjects)
  
     %% Computations
@@ -197,6 +200,38 @@ for ss = 1:length(subjects)
     sum_weighted_z
     xlswrite(fullfile(output_path, filename), sum_weighted_z)
 
+    %% Store result in a matrix for later stats calculations
+
+    % store the result for this subject in sum_weighted_zs_all
+    % (at the i_subj-th position), so that
+    % group statistics can be computed
+    % >@@>
+    sum_weighted_zs_all{rr}(i_subj) = sum_weighted_z;
+    % <@@<
+    
+    
   end
+
+end
+
+%% Compute T-Statistics and Print Results
+
+for rr = 1:length(rois)
+
+    % Using matlab's stat toolbox (if present)
+    if cosmo_check_external('@stats',false)
+
+        % >@@>
+        [h,p,ci,stats] = ttest(sum_weighted_zs_all{rr});
+        fprintf(['correlation difference in %s at group level: '...
+            '%.3f +/- %.3f, t_%d=%.3f, p=%.5f (using matlab stats '...
+            'toolbox)\n'],...
+            rois{i_roi},mean(sum_weighted_zs_all{rr}),...
+                        std(sum_weighted_zs_all{rr}),...
+            stats.df,stats.tstat,p);
+        % <@@<
+    else
+        fprintf('Matlab stats toolbox not available\n');
+    end
 
 end
