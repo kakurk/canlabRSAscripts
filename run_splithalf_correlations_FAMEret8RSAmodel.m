@@ -1,17 +1,17 @@
 %% Roi-based MVPA for single subject (run_split_half_correlations_single_sub)
 %
-% Load t-stat data from one subject, apply 'vt' mask, compute difference
+% Load beta image data from one subject, apply 'vt' mask, compute difference
 % of (fisher-transformed) between on- and off diagonal split-half
 % correlation values.
 %
 % #   For CoSMoMVPA's copyright information and license terms,   #
 % #   see the COPYING file distributed with CoSMoMVPA.           #
 
-% Preliminary
-% clc
-% clear all
-addpath(genpath('S:\nad12\CoSMoMVPA-master'))
-%addpath(genpath('/gpfs/group/n/nad12/RSA/Scripts/CoSMoMVPA-master'))
+if isunix % if we are Hammer, a unix system
+    addpath(genpath('/gpfs/group/n/nad12/RSA/Scripts/CoSMoMVPA-master'))
+else % if not on unix, assume we are on Anvil
+    addpath(genpath('S:\nad12\CoSMoMVPA-master'))
+end
 
 %% Set analysis parameters
 subjects = {'18y404','18y566','20y297'};%'20y415','20y439','20y441','20y444','20y455','21y299','21y437','21y521','21y534','22y422','23y452','23y546','25y543'};%'67o153','67o178','69o144','70o118','71o152','71o193','72o164','73o165','76o120','76o162','78o113','79o108','80o121','80o128','81o125','81o312','83o197'}; 
@@ -38,7 +38,7 @@ for ss = 1:length(subjects)
 
     roi_label = rois{rr}; % name of ROI mask used for running correlations  
 
-    % file locations for both halves
+    % the averaged betas
     HREC     = fullfile(data_path, 'average_beta_HREC.nii');
     HFAM     = fullfile(data_path, 'average_beta_HFAM.nii');
     FAREC    = fullfile(data_path, 'average_beta_FAREC.nii');
@@ -170,9 +170,7 @@ for ss = 1:length(subjects)
     sum_weighted_z = sum(weighted_z(:)); %Expected value under H0 is 0
     % <@@<
 
-    % Create code to output files...
-
-    %% % store and save results
+    %% store and save results
     output_path = fullfile(study_path, subjects{ss}, 'RSA_Results');
 
     if ~exist(output_path, 'dir')
@@ -197,7 +195,6 @@ for ss = 1:length(subjects)
     %% Write sum of wieghted_z matrix to excel
     filename = ['RSAtest_', subjects{ss}, '_' roi_label '_sum_weighted_z_.xlsx'];
     sum_weighted_z
-    %xlswrite(fullfile(output_path, filename), H) ---ICT commented out and added below line 01/25/2017
     xlswrite(fullfile(output_path, filename), sum_weighted_z)
 
   end
