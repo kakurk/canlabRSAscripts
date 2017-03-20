@@ -199,8 +199,6 @@ for ss = 1:length(subjects)
     sum_weighted_z
     %xlswrite(fullfile(output_path, filename), H) ---ICT commented out and added below line 01/25/2017
     xlswrite(fullfile(output_path, filename), sum_weighted_z)
-    %% Write .nii output
-    %output_fn = fullfile(output_path, [subjects{ss} '_' roi_label '_RSA_ERS.nii']); %WHAT IS THIS? ICT Confirm
 
   end
 
