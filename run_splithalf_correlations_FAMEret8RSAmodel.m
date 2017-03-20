@@ -39,10 +39,10 @@ for ss = 1:length(subjects)
     roi_label = rois{rr}; % name of ROI mask used for running correlations  
 
     % file locations for both halves
-    HREC  = fullfile(data_path, 'average_beta_HREC.nii');
-    HFAM    = fullfile(data_path, 'average_beta_HFAM.nii');
-    FAREC     = fullfile(data_path, 'average_beta_FAREC.nii');
-    FAFAM     = fullfile(data_path, 'average_beta_FAFAM.nii');
+    HREC     = fullfile(data_path, 'average_beta_HREC.nii');
+    HFAM     = fullfile(data_path, 'average_beta_HFAM.nii');
+    FAREC    = fullfile(data_path, 'average_beta_FAREC.nii');
+    FAFAM    = fullfile(data_path, 'average_beta_FAFAM.nii');
     
     mask_fn  = fullfile(study_path, [roi_label '.nii']); %second half of mask name
 
@@ -52,15 +52,15 @@ for ss = 1:length(subjects)
                                          'targets',(1)',... %ex: Rem
                                          'chunks',(1)); %ex: encoding (avg. of all enc runs)
 
-    HFAM_ds = cosmo_fmri_dataset(HFAM,'mask',mask_fn,...
+    HFAM_ds  = cosmo_fmri_dataset(HFAM,'mask',mask_fn,...
                                          'targets',(2)',... %ex. Know
                                          'chunks',(1)); %encoding (avg. of all enc runs)
 
-    FAREC_ds  = cosmo_fmri_dataset(FAREC,'mask',mask_fn,...
+    FAREC_ds = cosmo_fmri_dataset(FAREC,'mask',mask_fn,...
                                          'targets',(3)',... %New
                                          'chunks',(1)); %ret
                                      
-    FAFAM_ds  = cosmo_fmri_dataset(FAFAM,'mask',mask_fn,...
+    FAFAM_ds = cosmo_fmri_dataset(FAFAM,'mask',mask_fn,...
                                          'targets',(4)',... %New
                                          'chunks',(1)); %ret
 
@@ -70,7 +70,7 @@ for ss = 1:length(subjects)
     % Combine files at encoding and retrieval to create two files (i.e.,
     % stacking)
     % make sure all ds_* changed from here on
-    ds_all = cosmo_stack({HREC_ds, HFAM_ds, FAREC_ds, FAFAM_ds});
+    ds_all   = cosmo_stack({HREC_ds, HFAM_ds, FAREC_ds, FAFAM_ds});
 
     % Data set labels
     ds_all.sa.labels = {'HREC';'HFAM';'FAREC';'FAFAM'}; 
