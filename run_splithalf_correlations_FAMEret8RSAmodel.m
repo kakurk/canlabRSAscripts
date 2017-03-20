@@ -18,23 +18,23 @@ subjects   = {'18y404'  '18y566'  '20y297'  '20y396'  '20y415'  '20y439'};
 rois       = {'rLTG_left'}; %add in leftHC and right HC for starters
 study_path = 'S:\nad12\FAME8\Analysis_ret\FAMEret8RSA_hrf';
 
-% Edit the SPM.mat file to use paths here on Hammer
-%spm_changepath(fullfile(study_path, subjects{1}, 'SPM.mat'), 'S:\nad12\FAME8', '/gpfs/group/n/nad12/RSA')
-%spm_changepath(fullfile(study_path, subjects{1}, 'SPM.mat'), '\', '/')
-
 % initalizing the sum of weighted zs all array
 sum_weighted_zs_all = cell(1,length(rois));
 
 for ss = 1:length(subjects)
  
+    % Edit the SPM.mat file to use paths here on Hammer
+    spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), 'S:\nad12\FAME8', '/gpfs/group/n/nad12/RSA')
+    spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), '\', '/')
+    
     %% Computations
     data_path  = fullfile(study_path, subjects{ss});
     
-     % Average Betas
-   average_betas(subjects{ss}, study_path, 'HREC', '.*HREC.*');
-   average_betas(subjects{ss}, study_path, 'HFAM', '.*HFAM.*');
-   average_betas(subjects{ss}, study_path, 'FAREC', '.*FAREC.*');
-   average_betas(subjects{ss}, study_path, 'FAFAM', '.*FAFAM.*');
+    % Average Betas
+    average_betas(subjects{ss}, study_path, 'HREC', '.*HREC.*');
+    average_betas(subjects{ss}, study_path, 'HFAM', '.*HFAM.*');
+    average_betas(subjects{ss}, study_path, 'FAREC', '.*FAREC.*');
+    average_betas(subjects{ss}, study_path, 'FAFAM', '.*FAFAM.*');
     
   for rr = 1:length(rois)
 
