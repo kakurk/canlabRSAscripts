@@ -66,10 +66,7 @@ for ss = 1:length(subjects)
     FAFAM_ds = cosmo_fmri_dataset(FAFAM,'mask',mask_fn,...
                                          'targets',(4)',... %New
                                          'chunks',(1)); %ret
-
-
    
-
     % Combine files at encoding and retrieval to create two files (i.e.,
     % stacking)
     % make sure all ds_* changed from here on
@@ -80,14 +77,9 @@ for ss = 1:length(subjects)
     
     % cosmo fxn to make sure data in right format
     cosmo_check_dataset(ds_all);
-    
-    % Some sanity checks to ensure that the data has matching features (voxels)
-    % and matching targets (conditions)
-   %  assert(isequal(Target_ds.fa,Lure_ds.fa)); %,New_ds.fa
-   %  assert(isequal(Target_ds.sa.targets,Lure_ds.sa.targets)); %,New_ds.sa.targets
 
     % change if you change ds_* above
-    nClasses = numel(ds_all.sa.labels);  %%why isn't this pulling all labels?(NAD10.31.16)
+    nClasses = numel(ds_all.sa.labels);
 
     % get the sample data - samples are the correlations being ran on each
     % voxel (a bunch of numbers)
@@ -109,70 +101,6 @@ for ss = 1:length(subjects)
     z = atanh(rho);
     % <@@<
 
-    % <@@<
-
-    % Set up a contrast matrix to test whether the element in the diagonal
-    % (i.e. a within category correlation) is higher than the average of all
-    % other elements in the same row (i.e. the average between-category
-    % correlations). For testing the split half correlation of n classes one
-    % has an n x n matrix (here, n=6).
-    %
-    % To compute the difference between the average of the on-diagonal and the
-    % average of the off-diagonal elements, consider that there are
-    % n on-diagonal elements and n*(n-1) off-diagonal elements.
-    % Therefore, set
-    % - the on-diagonal elements to 1/n           [positive]
-    % - the off-diagonal elements to -1/(n*(n-1)) [negative]
-    % This results in a contrast matrix with weights for each element in
-    % the correlation matrix, with positive and equal values on the diagonal,
-    % negative and equal values off the diagonal, and a mean value of zero.
-    %
-    % Under the null hypothesis one would expect no difference between the
-    % average on the on- and off-diagonal, hence correlations weighted by the
-    % contrast matrix has an expected mean of zero. A postive value for
-    % the weighted correlations would indicate more similar patterns for
-    % patterns in the same condition (across the two halves) than in different
-    % conditions.
-
-    % Set the contrast matrix as described above and assign it to a variable
-    % named 'contrast_matrix'
-    % >@@>
-    contrast_matrix = (eye(nClasses)-1/nClasses)/(nClasses-1);
-
-    % alternative solution
-    contrast_matrix_alt = zeros(nClasses,nClasses);
-    for k = 1:nClasses
-        for j = 1:nClasses
-            if k == j
-                value = 1/nClasses;
-            else
-                value = -1/(nClasses*(nClasses-1));
-            end
-            contrast_matrix_alt(k,j) = value;
-        end
-    end
-
-    % <@@<
-
-    % sanity check: ensure the matrix has a sum of zero
-    if abs(sum(contrast_matrix(:)))>1e-14
-        error('illegal contrast matrix: it must have a sum of zero');
-    end
-
-    % Weigh the values in the matrix 'z' by those in the contrast_matrix
-    % and then average them (hint: use the '.*' operator for element-wise
-    % multiplication).
-    % Store the result in a variable 'weighted_z'.
-    % >@@>
-    weighted_z = z .* contrast_matrix;
-    % <@@<
-
-    % Compute the sum of all values in 'weighted_z', and store the result in
-    % 'sum_weighted_z'.
-    % >@@>
-    sum_weighted_z = sum(weighted_z(:)); %Expected value under H0 is 0
-    % <@@<
-
     %% store and save results
     output_path = fullfile(study_path, subjects{ss}, 'RSA_Results');
 
@@ -190,16 +118,6 @@ for ss = 1:length(subjects)
     z
     xlswrite(fullfile(output_path, filename), z)
 
-    %% Write wieghted_z matrix to excel
-    filename = ['RSAtest_', subjects{ss}, '_' roi_label '_wieghted_z_.xlsx'];
-    weighted_z
-    xlswrite(fullfile(output_path, filename), weighted_z)
-
-    %% Write sum of wieghted_z matrix to excel
-    filename = ['RSAtest_', subjects{ss}, '_' roi_label '_sum_weighted_z_.xlsx'];
-    sum_weighted_z
-    xlswrite(fullfile(output_path, filename), sum_weighted_z)
-
     %% Store result in a structure for later calculations
 
     % store the result for this subject in z_all
@@ -207,7 +125,7 @@ for ss = 1:length(subjects)
     % group statistics can be computed
     % >@@>
     z_all{rr}   = cat(3, z_all{rr}, z);
-    rho_all{rr} = cat(3, rho_all{rr}, z);
+    rho_all{rr} = cat(3, rho_all{rr}, rho);
     % <@@<
     
     
@@ -234,3 +152,49 @@ for rr = 1:length(rois)
     disp(stats_all{rr})
     
 end
+
+%% Display Averaged Rho Matrices
+
+% plot an image of the correlation matrix averaged over
+% participants (one for each roi)
+
+% allocate space for axis handles, so that later all plots can be set to
+% have the same color limits
+ax_handles = zeros(length(rois),1);
+col_limits = zeros(length(rois),2);
+
+for rr = 1:length(rois)
+    figure
+
+    % store axis handle for current figure
+    ax_handles(rr) = gca;
+
+    % compute the average correlation matrix using 'rho_sum', and store the
+    % result in a variable 'rho_mean'. Note that the number of subjects is
+    % stored in a variable 'nsubjects'
+    % >@@>
+    [~,~,nsubjs] = size(rho_all{rr});
+    rho_mean     = sum(rho_all{rr}, 3)/nsubjs;
+    % <@@<
+
+    % visualize the rho_mean matrix using imagesc
+    % >@@>
+    imagesc(rho_mean);
+    % <@@<
+
+    % set labels, colorbar and title
+    set(gca, 'xtick', 1:numel(ds_all.sa.labels), 'xticklabel', ds_all.sa.labels)
+    set(gca, 'ytick', 1:numel(ds_all.sa.labels), 'yticklabel', ds_all.sa.labels)
+
+    colorbar
+    desc=sprintf(['Average splithalf correlation across subjects '...
+                    'in mask ''%s'''], rois{rr});
+    title(desc)
+
+
+    col_limits(rr,:) = get(gca, 'clim');
+end
+
+% give all figures the same color limits such that correlations can be
+% compared visually
+set(ax_handles, 'clim', [min(col_limits(:)), max(col_limits(:))])
