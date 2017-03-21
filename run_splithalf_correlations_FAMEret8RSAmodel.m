@@ -25,8 +25,10 @@ rho_all = cell(1,length(rois));
 for ss = 1:length(subjects)
  
     % Edit the SPM.mat file to use paths here on Hammer
-    spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), 'S:\nad12\FAME8', '/gpfs/group/n/nad12/RSA')
-    spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), '\', '/')
+    if isunix
+        spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), 'S:\nad12\FAME8', '/gpfs/group/n/nad12/RSA')
+        spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), '\', '/')
+    end
     
     %% Computations
     data_path  = fullfile(study_path, subjects{ss});
