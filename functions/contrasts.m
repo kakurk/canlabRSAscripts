@@ -1,43 +1,56 @@
-function oddeven_contrasts(subject, studypath, cond, express)
+function contrasts(SPMmat)
 
 % Initalize SPM; load this subjects SPM.mat
 SPM    = [];
-SPMmat = fullfile(studypath, subject, 'SPM.mat');
 load(SPMmat)
 
-% Find all of the betas for this condition using the regular expression
-matches = regexp(SPM.xX.name, express);
-matches = find(~cellfun('isempty', matches));
+% Initalize a matrix of zeros to store the contrast vectors
+contrast_vectors = zeros(length(SPM.xX.name));
 
-%-- Calculate Contrast Vectors
+% For each regressor in this SPM model..
+for r = 1:length(SPM.xX.name)
+    
+    % Current Regressor
+    curRegressor = SPM.xX.name{r};
+    
+    %-- Create Contrast Vector
+    
+    % find where the current regressor is located
+    logicFilt = strcmp(curRegressor. SPM.xX.name);
+    
+    % create the contrast vector for this regressor
+    contrast_vectors(r, logicFilt) = 1;
+    
+end
 
-cont_vector = zeros(2,length(SPM.xX.name));
-
-% Odd Runs
-cont_name{1} = [cond '_Odd'];
-cont_vector(1, matches(1:2:length(matches))) = 1/length(matches(1:2:length(matches)));
-
-% Even Runs
-cont_name{2} = [cond '_Even'];
-cont_vector(2, matches(2:2:length(matches))) = 1/length(matches(2:2:length(matches)));
-
-% Set the conmanager parameters calculate odd and even run betas
-matlabbatch = set_conmanger(SPMmat, cont_name, cont_vector);
+% Set the contrast manager parameters
+matlabbatch = set_conmanger(SPMmat, SPM.xX.name, cont_vector);
 
 % Run through spm_jobman
 spm_jobman('run', matlabbatch)
 
-% set_conmanager subfunction
+%% Subfunctions
 
-function matlabbatch = set_conmanger(fullpath2SPM, cont_name, cont_vec)
-    matlabbatch{1}.spm.stats.con.spmmat = {fullpath2SPM};
-    matlabbatch{1}.spm.stats.con.consess{1}.tcon.name = cont_name{1};
-    matlabbatch{1}.spm.stats.con.consess{1}.tcon.weights = cont_vec(1,:);
-    matlabbatch{1}.spm.stats.con.consess{1}.tcon.sessrep = 'none';
-    matlabbatch{1}.spm.stats.con.consess{2}.tcon.name = cont_name{2};
-    matlabbatch{1}.spm.stats.con.consess{2}.tcon.weights = cont_vec(2,:);
-    matlabbatch{1}.spm.stats.con.consess{2}.tcon.sessrep = 'none';
+function matlabbatch = set_conmanger(fullpath2SPM, cont_names, con_vectors)
+% set_conmanager  set SPM's contrast manager parameters
+%
+%   matlabbatch = set_conmanger(fullpath2SPM, cont_names, con_vectors)
+%
+%       fullpath2SPM = string, full path to the SPM.mat file
+%       cont_names   = cell of strings of the names of the contrasts
+%       con_vectors  = a matrix of the contrast vectors, with each row
+%                      corresponding to a contrast vector
+
+    number_of_contrasts = size(con_vectors, 1); % rows = contrasts
+
+    matlabbatch{1}.spm.stats.con.spmmat = {fullpath2SPM}; % path to SPM.mat    
+    for c = 1:number_of_contrasts
+        matlabbatch{1}.spm.stats.con.consess{c}.tcon.name    = cont_names{c};
+        matlabbatch{1}.spm.stats.con.consess{c}.tcon.weights = con_vectors(c,:);
+        matlabbatch{1}.spm.stats.con.consess{c}.tcon.sessrep = 'none';
+    end
     matlabbatch{1}.spm.stats.con.delete = 0;
+    
 end
        
 
