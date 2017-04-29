@@ -18,7 +18,7 @@ subjects   = {'18y404'  '18y566'  '20y297' '20y415'  '20y439'}; % '20y396' <-- t
 rois       = {'rLTG_left'}; %
 study_path = '/gpfs/group/n/nad12/RSA/Analysis_ret/FAMEret8RSA_hrf'; % path on hammer
 
-% initalizing the sum of weighted zs all array
+% initalizing z_all and rho_all cell arrays
 z_all   = cell(1,length(rois));
 rho_all = cell(1,length(rois));
 
@@ -32,76 +32,59 @@ for ss = 1:length(subjects)
     
     %% Computations
     data_path  = fullfile(study_path, subjects{ss});
+    spm_path   = fullfile(data_path, 'SPM.mat');
     
-    % Average Betas
-    average_betas(subjects{ss}, study_path, 'HREC', '.*HREC.*');
-    average_betas(subjects{ss}, study_path, 'HFAM', '.*HFAM.*');
-    average_betas(subjects{ss}, study_path, 'FAREC', '.*FAREC.*');
-    average_betas(subjects{ss}, study_path, 'FAFAM', '.*FAFAM.*');
-    
+    % Create a contrast for each regressor in this subjects SPM.mat file
+    contrasts(spm_path);
+
   for rr = 1:length(rois)
 
-    roi_label = rois{rr}; % name of ROI mask used for running correlations  
+    roi_label = rois{rr}; % name of ROI mask within which we will compare pattern similarity
 
-    % path to the averaged betas
-    HREC     = fullfile(data_path, 'average_beta_HREC.nii');
-    HFAM     = fullfile(data_path, 'average_beta_HFAM.nii');
-    FAREC    = fullfile(data_path, 'average_beta_FAREC.nii');
-    FAFAM    = fullfile(data_path, 'average_beta_FAFAM.nii');
+    %-- Concatenate the spmT images
     
-    mask_fn  = fullfile(study_path, [roi_label '.nii']); %second half of mask name
+    % Identify the spmT images
+    concat_spmT_fn  = fullfile(data_path, 'concatenated_spmT_images.nii');
+    spmT_volumes    = cellstr(spm_select('FPList', data_path, 'spmT.*\.nii'));
 
-    % load two halves as CoSMoMVPA dataset structs.
-    % Chunks = Runs  Targets = trial type conditions
-    HREC_ds  = cosmo_fmri_dataset(HREC,'mask',mask_fn,...
-                                         'targets',(1)',... % HREC
-                                         'chunks',(1)); % (avg. of all runs)
-
-    HFAM_ds  = cosmo_fmri_dataset(HFAM,'mask',mask_fn,...
-                                         'targets',(2)',... % HFAM
-                                         'chunks',(1)); % (avg. of all runs)
-
-    FAREC_ds = cosmo_fmri_dataset(FAREC,'mask',mask_fn,...
-                                         'targets',(3)',... % FAREC
-                                         'chunks',(1)); % (avg. of all runs)
-                                     
-    FAFAM_ds = cosmo_fmri_dataset(FAFAM,'mask',mask_fn,...
-                                         'targets',(4)',... % FAFAM
-                                         'chunks',(1)); % (avg. of all runs)
-   
-    % Stack above files
-    % make sure all ds_* changed from here on
-    ds_all   = cosmo_stack({HREC_ds, HFAM_ds, FAREC_ds, FAFAM_ds});
-
-    % Data set labels (same order as above)
-    ds_all.sa.labels = {'HREC';'HFAM';'FAREC';'FAFAM'}; 
+    if ~exist(concat_spmT_fn, 'file')
+        matlabbatch      = set_3D_to_4D(volumes, 'concatenate_contrasts.nii');
+        spm_jobman('run', matlabbatch)
+    end
     
-    % cosmo checks to make sure data in right format
+    % mask
+    mask_fn  = fullfile(study_path, [roi_label '.nii']);
+
+    % load concatenated spmT images
+    ds_all  = cosmo_fmri_dataset(concat_spmT_fn, ...
+                                          'mask', mask_fn, ...
+                                          'targets', 1:length(spmT_volumes)', ...
+                                          'chunks', 1);
+                                      
+    % labels
+    SPM = [];
+    load(spm_path);
+    ds_all.sa.labels = {SPM.Xx.name}';
+                                      
+    % cosmo check to make sure data in right format
     cosmo_check_dataset(ds_all);
 
     % get the samples. The samples are the beta values from all of the
     % vovels in the current ROI
     all_ds_samples = ds_all.samples;
 
-    % compute all correlation values between the trial types, resulting
-    % in a nTrialTypes x nTrialTypes matrix. Store this matrix in a variable 'rho'.
-    % Hint: use cosmo_corr (or builtin corr, if the matlab stats toolbox
-    %       is available) after transposing the samples.
-    % >@@>
+    % compute all correlation values between the trials, resulting
+    % in a nTrials x nTrials matrix. Store this matrix in a variable 'rho'.
     rho = cosmo_corr(all_ds_samples');
-    % <@@<
 
     % Correlations are limited between -1 and +1, thus they cannot be normally
     % distributed. To make these correlations more 'normal', apply a Fisher
     % transformation and store this in a variable 'z'
-    % (hint: use atanh).
-    % >@@>
     z = atanh(rho);
-    % <@@<
 
     %% store and save results
     % path to save results
-    output_path = fullfile(study_path, subjects{ss}, 'RSA_Results');
+    output_path = fullfile(study_path, subjects{ss}, 'RSA_Individual_Results');
 
     % create the output path if it doesn't already exist
     if ~exist(output_path, 'dir')
@@ -109,24 +92,16 @@ for ss = 1:length(subjects)
     end
     
     %% Write rho matrix to Excel
-    filename = ['RSAtest_', subjects{ss}, '_' roi_label '_rho_.xlsx'];
-    rho %#ok<*NOPTS>
+    filename = [subjects{ss}, '_' roi_label '_rho_.xlsx'];
     xlswrite(fullfile(output_path, filename), rho)
 
     %% Write z matrix to Excel
-    filename = ['RSAtest_', subjects{ss}, '_' roi_label '_z_.xlsx'];
-    z
+    filename = [subjects{ss}, '_' roi_label '_z_.xlsx'];
     xlswrite(fullfile(output_path, filename), z)
 
-    %% Store result in a structure for later calculations
-
-    % store the result for this subject in z_all and rho_all cell arrays 
-    % so that group statistics can be computed
-    % >@@>
+    %% Store result in a cell array for later calculations
     z_all{rr}   = cat(3, z_all{rr}, z);
-    rho_all{rr} = cat(3, rho_all{rr}, rho);
-    % <@@<
-    
+    rho_all{rr} = cat(3, rho_all{rr}, rho);    
     
   end
 
@@ -141,7 +116,7 @@ end
 stats_all = cell(1,length(rois));
 
 % output path
-outpath = fullfile(study_path, 'RSA_group_results')
+outpath = fullfile(study_path, 'RSA_Group_Results');
 
 % create the output path if it doesn't already exist
 if ~exist(outpath, 'dir')
@@ -154,7 +129,7 @@ for rr = 1:length(rois)
     % how many rows and columns are there in the z matrix?
     [rows, cols, ~] = size(z_all{rr});
     
-    % for each row for each column
+    % for each row; for each column...
     for crow = 1:rows
         for ccol = 1:cols
             
@@ -172,7 +147,7 @@ for rr = 1:length(rois)
     disp(stats_all{rr})
     
     % Save the t statistics to a file
-    filename = [roi_label '_results.xlsx']
+    filename = [roi_label '_results.xlsx'];
     xlswrite(fullfile(outpath, filename), stats_all{rr})
     
 end
@@ -196,22 +171,17 @@ for rr = 1:length(rois)
     % compute the average correlation matrix using 'rho_sum', and store the
     % result in a variable 'rho_mean'. Note that the number of subjects is
     % stored in a variable 'nsubjects'
-    % >@@>
-    [~,~,nsubjs] = size(rho_all{rr});
-    rho_mean     = sum(rho_all{rr}, 3)/nsubjs;
-    % <@@<
-
+    rho_mean_matrix  = mean(rho_all{rr}, 3);
+    
     % visualize the rho_mean matrix using imagesc
-    % >@@>
-    imagesc(rho_mean);
-    % <@@<
+    imagesc(rho_mean_matrix);
 
     % set labels, colorbar and title
     set(gca, 'xtick', 1:numel(ds_all.sa.labels), 'xticklabel', ds_all.sa.labels)
     set(gca, 'ytick', 1:numel(ds_all.sa.labels), 'yticklabel', ds_all.sa.labels)
 
-    colorbar
-    desc=sprintf(['Average splithalf correlation across subjects '...
+    colorbar;
+    desc=sprintf(['Average correlations among trials across subjects '...
                     'in mask ''%s'''], rois{rr});
     title(desc)
 

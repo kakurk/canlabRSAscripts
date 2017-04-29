@@ -49,7 +49,7 @@ function matlabbatch = set_conmanger(fullpath2SPM, cont_names, con_vectors)
         matlabbatch{1}.spm.stats.con.consess{c}.tcon.weights = con_vectors(c,:);
         matlabbatch{1}.spm.stats.con.consess{c}.tcon.sessrep = 'none';
     end
-    matlabbatch{1}.spm.stats.con.delete = 0;
+    matlabbatch{1}.spm.stats.con.delete = 1;
     
 end
        
