@@ -1,11 +1,7 @@
-%% Roi-based MVPA for single subject (run_split_half_correlations_single_sub)
+%% Roi-based MVPA for CAN Lab
 %
-% Load beta image data from one subject, apply 'vt' mask, compute difference
-% of (fisher-transformed) between on- and off diagonal split-half
-% correlation values.
-%
-% #   For CoSMoMVPA's copyright information and license terms,   #
-% #   see the COPYING file distributed with CoSMoMVPA.           #
+% Load spmT images from each subject, apply ROI mask, calculate 
+% correlations between all trials.
 
 if isunix % if we are Hammer, a unix system
     addpath(genpath('/gpfs/group/n/nad12/RSA/Scripts/CoSMoMVPA-master'))
@@ -13,10 +9,14 @@ else % if not on unix, assume we are on Anvil
     addpath(genpath('S:\nad12\CoSMoMVPA-master'))
 end
 
+% add the functions subfolder to the MATLAB search path
+path = fileparts(mfilename('fullpath'));
+addpath([path filesep 'functions'])
+
 %% Set analysis parameters
 subjects   = {'18y404'  '18y566'  '20y297' '20y415'  '20y439'}; % '20y396' <-- this subjects doesn't have a model run
 rois       = {'rLTG_left'}; %
-study_path = '/gpfs/group/n/nad12/RSA/Analysis_ret/FAMEret8RSA_hrf'; % path on hammer
+study_path = '/gpfs/group/n/nad12/RSA/Analysis_ret/FAMEret8RSA_hrf'; % path to model
 
 % initalizing z_all and rho_all cell arrays
 z_all   = cell(1,length(rois));
@@ -30,17 +30,13 @@ for ss = 1:length(subjects)
         spm_changepath(fullfile(study_path, subjects{ss}, 'SPM.mat'), '\', '/')
     end
     
-    %% Computations
+    % This subjects data_path and spm_path
     data_path  = fullfile(study_path, subjects{ss});
     spm_path   = fullfile(data_path, 'SPM.mat');
     
     % Create a contrast for each regressor in this subjects SPM.mat file
     contrasts(spm_path);
-
-  for rr = 1:length(rois)
-
-    roi_label = rois{rr}; % name of ROI mask within which we will compare pattern similarity
-
+    
     %-- Concatenate the spmT images
     
     % Identify the spmT images
@@ -51,17 +47,22 @@ for ss = 1:length(subjects)
         matlabbatch      = set_3D_to_4D(volumes, 'concatenate_contrasts.nii');
         spm_jobman('run', matlabbatch)
     end
+
+  for rr = 1:length(rois)
+
+    % ROI label
+    roi_label = rois{rr}; % name of ROI mask within which we will compare pattern similarity
     
-    % mask
+    % full path to ROI mask
     mask_fn  = fullfile(study_path, [roi_label '.nii']);
 
     % load concatenated spmT images
     ds_all  = cosmo_fmri_dataset(concat_spmT_fn, ...
                                           'mask', mask_fn, ...
-                                          'targets', 1:length(spmT_volumes)', ...
+                                          'targets', (1:length(spmT_volumes))', ...
                                           'chunks', 1);
                                       
-    % labels
+    % Add Labels
     SPM = [];
     load(spm_path);
     ds_all.sa.labels = {SPM.Xx.name}';
@@ -69,12 +70,13 @@ for ss = 1:length(subjects)
     % cosmo check to make sure data in right format
     cosmo_check_dataset(ds_all);
 
-    % get the samples. The samples are the beta values from all of the
-    % vovels in the current ROI
+    % get the samples. The samples are the spmT values from all of the
+    % voxels for all of the trials in the current ROI
     all_ds_samples = ds_all.samples;
 
-    % compute all correlation values between the trials, resulting
-    % in a nTrials x nTrials matrix. Store this matrix in a variable 'rho'.
+    % compute correlation values between the all trials, resulting
+    % in a nTrials x nTrials matrix, where cell of the matrix represents
+    % the correlations between the voxels for each pair of trials.
     rho = cosmo_corr(all_ds_samples');
 
     % Correlations are limited between -1 and +1, thus they cannot be normally
@@ -92,16 +94,16 @@ for ss = 1:length(subjects)
     end
     
     %% Write rho matrix to Excel
-    filename = [subjects{ss}, '_' roi_label '_rho_.xlsx'];
+    filename = [subjects{ss}, '_' roi_label '_rho_matix.xlsx'];
     xlswrite(fullfile(output_path, filename), rho)
 
     %% Write z matrix to Excel
-    filename = [subjects{ss}, '_' roi_label '_z_.xlsx'];
+    filename = [subjects{ss}, '_' roi_label '_z_matrix.xlsx'];
     xlswrite(fullfile(output_path, filename), z)
 
     %% Store result in a cell array for later calculations
-    z_all{rr}   = cat(3, z_all{rr}, z);
-    rho_all{rr} = cat(3, rho_all{rr}, rho);    
+    z_all{rr}   = cat(3, z_all{rr}, z); % a nTrials x nTrials x nSubjects 3-D Matrix
+    rho_all{rr} = cat(3, rho_all{rr}, rho); % a nTrials x nTrials x nSubjects 3-D Matrix
     
   end
 
@@ -127,7 +129,7 @@ end
 for rr = 1:length(rois)
     
     % how many rows and columns are there in the z matrix?
-    [rows, cols, ~] = size(z_all{rr});
+    [rows, cols] = size(z_all{rr});
     
     % for each row; for each column...
     for crow = 1:rows
@@ -135,19 +137,15 @@ for rr = 1:length(rois)
             
             % do a one-sample t-test across subjects to see if the average
             % z value is signficnatly greater than 0 for this pair of
-            % conditions in this ROI
+            % trials in this ROI
             [h,p,ci,stats]            = ttest(z_all{rr}(crow,ccol,:));
             stats_all{rr}(crow, ccol) = stats.tstat;
             
         end
     end
     
-    % Display the statistics matrix in the command window
-    fprintf('T Statistics = \n\n')
-    disp(stats_all{rr})
-    
     % Save the t statistics to a file
-    filename = [roi_label '_results.xlsx'];
+    filename = [roi_label '_onesampleT_results.xlsx'];
     xlswrite(fullfile(outpath, filename), stats_all{rr})
     
 end
@@ -163,28 +161,33 @@ ax_handles = zeros(length(rois),1);
 col_limits = zeros(length(rois),2);
 
 for rr = 1:length(rois)
+    
+    % create a new figure
     figure
 
     % store axis handle for current figure
     ax_handles(rr) = gca;
 
-    % compute the average correlation matrix using 'rho_sum', and store the
-    % result in a variable 'rho_mean'. Note that the number of subjects is
-    % stored in a variable 'nsubjects'
+    % compute the average correlation matrix
     rho_mean_matrix  = mean(rho_all{rr}, 3);
     
-    % visualize the rho_mean matrix using imagesc
+    % visualize the rho_mean_matrix using imagesc
     imagesc(rho_mean_matrix);
 
-    % set labels, colorbar and title
+    % set labels, taken from the SPM.mat file
     set(gca, 'xtick', 1:numel(ds_all.sa.labels), 'xticklabel', ds_all.sa.labels)
     set(gca, 'ytick', 1:numel(ds_all.sa.labels), 'yticklabel', ds_all.sa.labels)
 
+    % colorbar
     colorbar;
+    
+    % title
     desc=sprintf(['Average correlations among trials across subjects '...
                     'in mask ''%s'''], rois{rr});
     title(desc)
 
+    % store color limits so that all graphs are on the same scale for easy
+    % visual comparison
     col_limits(rr,:) = get(gca, 'clim');
 end
 
