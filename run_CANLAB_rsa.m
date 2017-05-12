@@ -26,19 +26,20 @@ cosmo_warning('off')
 %% Set analysis parameters
 
 % Parameters:
-%   subjects             = cell array of subject IDs
-%   rois                 = cell array of rois mask filenames
-%   studypath            = directory that holds the Single Trial SPM model
-%   trialtypesOfInterest = cell array of trial types of interest for this analysis
+%   subjects             = cell array of subject IDs.
+%   rois                 = cell array of rois mask filenames. Assumes that
+%                          this ROI is in the studypath directory.
+%   studypath            = directory that holds the Single Trial SPM model.
+%   trialtypesOfInterest = cell array of trial types of interest for this
+%                          analysis.
 subjects             = { '18y404' '18y566'  '20y297' };
-rois                 = {'rLTG_left'};
+rois                 = { 'rLTG_left' };
 study_path           = '/gpfs/group/n/nad12/RSA/Analysis_ret/SingleTrialModel';
-trialtypesOfInterest = {'RecHits' 'FamHits' 'RecFAs' 'FamFAs'};
-
+trialtypesOfInterest = { 'RecHits' 'FamHits' 'RecFAs' 'FamFAs' };
 
 %% Routine
 
-% path to save results
+% path to save results into
 output_path = fullfile(study_path, 'RSA_Results');
 
 % create the output path if it doesn't already exist
@@ -46,7 +47,7 @@ if ~exist(output_path, 'dir')
     mkdir(output_path)
 end
 
-% initalizing z_all, rho_all, and
+% initalizing cell arrays for z_all, rho_all, and trial_labels
 z_all        = cell(1,length(rois));
 rho_all      = cell(1,length(rois));
 trial_labels = cell(1, length(subjects));
@@ -61,7 +62,9 @@ for ss = 1:length(subjects)
     
     % This subject's:
     %   data_path = fullpath to this subject's Single Trial Model directory
-    %   spm_path  = fullpath to this subject's SPM.mat file
+    %   spm_path  = fullpath to this subject's SPM.mat file. Note: the
+    %   :beta appended to the end tells cosmo to pull the beta information
+    %   from the SPM.mat file.
     data_path  = fullfile(study_path, subjects{ss});
     spm_path   = fullfile(data_path, 'SPM.mat:beta');
 
@@ -77,7 +80,7 @@ for ss = 1:length(subjects)
         % infortmation from this subject's SPM.mat
         ds_all  = cosmo_fmri_dataset(spm_path, 'mask', mask_fn);
 
-        % Record the trial labels
+        % Record the trial labels for this subject
         if isempty(trial_labels{ss})
 
             % labels pulled from the SPM.mat by cosmo
@@ -92,7 +95,7 @@ for ss = 1:length(subjects)
             trial_labels{ss} = unNest_cell_array(trial_labels{ss});
         end
 
-        % cosmo_remove_useless_data removes the NaNs from the data                                  
+        % cosmo_remove_useless_data removes the NaNs from the data                                 
         ds_all = cosmo_remove_useless_data(ds_all);
 
         % cosmo check to make sure data in right format
@@ -103,9 +106,9 @@ for ss = 1:length(subjects)
         % nVoxels matrix
         all_ds_samples = ds_all.samples;
 
-        % compute correlation values between the all trials, resulting
+        % compute correlation values between all trials, resulting
         % in a nTrials x nTrials matrix, where each cell of the matrix represents
-        % the correlations between the voxel patterns for each pair of trials
+        % the correlation between the voxel patterns for each pair of trials
         rho = cosmo_corr(all_ds_samples');
 
         % Correlations are limited between -1 and +1, thus they cannot be normally
@@ -158,17 +161,18 @@ for ss = 1:length(subjects)
         %% Save the MATLAB figure
         filename = [subjects{ss}, '_' roi_label '_rho_matrix.png'];
         saveas(gcf, fullfile(output_path, filename))
+        
     end
 
 end
 
 %% Within and Between Trial Type Correlations
-% Now that we calculated a nrial x nTrials RSA matrix for each subject, we
+% Now that we calculated a nTrial x nTrials RSA matrix for each subject, we
 % want to combine trials by our trial types of interest to create a
 % nTrialTypesOfInterest x nTrialTypesOfInterest RSA matrix which averages
-% the within and between trial types correlations
+% the within and between trial types correlations.
 
-% A cell array that wil lhold the AverageRSAmatrices
+% A cell array that will hold the AverageRSAmatrices
 AllSubjectsAverageRSAmatrix = cell(1, length(rois));
 
 for s = 1:length(subjects)
@@ -178,7 +182,8 @@ for s = 1:length(subjects)
         % The current subjects rho matrix
         subjectsRhoMatrix = rho_all{r}(:,:,s);
 
-        % Grab just the lower off-diagonal of the current rho matrix
+        % Grab just the lower off-diagonal of the current rho matrix. See
+        % tril documentation
         lowerTriangle      = tril(subjectsRhoMatrix);
 
         % set the diagnol (i.e., the identity correlations) to 0
@@ -203,13 +208,16 @@ for s = 1:length(subjects)
         end
         
         % Put the within trial type mean correlations on the diagnol of an
-        % empty square matrix
+        % empty square matrix. See diag documentation.
         diagnol = diag(vector);
         
-        % initalize an empty vector for the off-diagnol correlations
+        % initalize an empty vector for the off-diagnol correlations.
+        % nchoosek determines that number of off-diagnol correlations. See
+        % nchoosek documentation.
         vector = zeros(1, nchoosek(length(trialtypesOfInterest), 2));
         
-        % all of the possible off-diagnol combinations
+        % all of the possible off-diagnol combinations. See combnk
+        % documentation.
         offdiagnoal_combinations = sortrows(combnk(1:length(trialtypesOfInterest),2));
         
         % calculate the mean off-diagnol correlations (i.e., the
@@ -220,7 +228,8 @@ for s = 1:length(subjects)
             vector(cp)   = mean(extractCorrelations(lowerTriangle, trial_labels{s}, firstinpair, secondinpair));
         end
         
-        % put the off-diagnol mean correlations into a square matrix
+        % put the off-diagnol mean correlations into a square matrix. See
+        % squareform documenation.
         offdiagnol = squareform(vector);
         
         % Combine the diagnol and and the off-diagnol matrices
@@ -230,11 +239,11 @@ for s = 1:length(subjects)
         AllSubjectsAverageRSAmatrix{rr} = cat(3, AllSubjectsAverageRSAmatrix{rr}, AverageRSAmatrix);
         
         % Add this new square correlation matrix to the empty cell array we
-        % initalize further up in this section
+        % initalized further up in this section
         trialtypeRSAmatrix(2:end, 2:end) = num2cell(AverageRSAmatrix);
         
         %% Display Results
-        % display the resulting rho matrices for visualization
+        % display the Average RSA matrices
 
         % create a new figure
         figure
