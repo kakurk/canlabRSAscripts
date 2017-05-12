@@ -248,7 +248,7 @@ for s = 1:length(subjects)
 
         % title
         desc=sprintf(['Average correlations among trials types for subject %s '...
-                        'in mask ''%s'''], subjects{ss}, rois{rr});
+                        'in mask ''%s'''], subjects{s}, rois{r});
         title(desc)
 
         % colorbar
@@ -259,7 +259,7 @@ for s = 1:length(subjects)
         xlswrite(fullfile(output_path, filename), AverageRSAmatrix)
         
         %% Save the MATLAB figure
-        filename = [subjects{ss}, '_' rois{r} '_trialtypeRSAmatrix.png'];
+        filename = [subjects{s}, '_' rois{r} '_trialtypeRSAmatrix.png'];
         saveas(gcf, fullfile(output_path, filename))
         
     end
@@ -289,7 +289,7 @@ for r = 1:length(rois)
     
     % title
     desc=sprintf(['Average correlations among trials types across subjects'...
-                    'in mask ''%s'''], rois{rr});
+                    'in mask ''%s'''], rois{r});
     title(desc)
     
     % colorbar
